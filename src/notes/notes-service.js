@@ -39,6 +39,8 @@ const NotesService = {
                 user_id: userId,
             })
             .update(noteFields)
+            .returning('*')
+            .then(rows => rows[0])
     },
 }
 

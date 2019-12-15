@@ -11,14 +11,14 @@ const bodyParser = express.json();
 const serializeNote = note => ({
     id: note.id,
     content: xss(note.content),
-    createdAt: xss(note.created_at),
+    createdAt: xss(note.date_created),
 })
 
 notesRouter
     .route('/')
     .all(requireAuth)
     .get((req, res, next) => {
-        NotesService.getAllNotes(req.app.get('db'))
+        NotesService.getAllNotes(req.app.get('db'), req.user.id)
             .then(notes => 
                 res.json(notes.map(serializeNote))   
             )
@@ -26,9 +26,16 @@ notesRouter
     })
 
     .post(bodyParser, (req, res, next) => {
+        const { user, body } = req;
+
+        const newNote = {
+            user_id: user.id,
+            content: body.content,
+        }
+
         NotesService.insertNote(
             req.app.get('db'),
-            req.body.content
+            newNote
         )
             .then(note => {
                 logger.info(`Note with id ${note.id} created.`)
@@ -44,8 +51,10 @@ notesRouter
     .route('/:noteId')
     .all(requireAuth)
     .all((req, res, next) => {
-        const { noteId } = req.params
-        NotesService.getById(req.app.get('db'), noteId)
+        const { noteId } = req.params;
+        const { user } = req;
+
+        NotesService.getById(req.app.get('db'), noteId, user.id)
             .then(note => {
                 if(!note) {
                     logger.error(`Note with id ${noteId} not found.`)
@@ -65,23 +74,36 @@ notesRouter
     })
 
     .delete((req, res, next) => {
+        const { user } = req;
         const { noteId } = req.params;
-        NotesService.deleteNote(req.app.get('db'), noteId)
+
+        NotesService.deleteNote(req.app.get('db'), noteId, user.id)
             .then(numRowsAffected => {
                 logger.info(`Note with id ${noteId} deleted.`)
-                res.status(204).end();
+                res.status(200).json({
+                    id: parseInt(noteId),
+                });
             })
             .catch(next)
     })
 
     .patch(bodyParser, (req, res, next) => {
+        const { user, body } = req;
+        const { noteId } = req.params;
+
+        console.log(body);
+
         NotesService.updateNote(
             req.app.get('db'),
-            req.params.noteId,
-            req.body.content
+            noteId,
+            user.id,
+            {
+                content: body.content
+            }
         )
-            .then(numRowsAffected => {
-                res.status(204).end()
+            .then(note => {
+                console.log(note);
+                res.status(200).json(serializeNote(note))
             })
             .catch(next)
     })
