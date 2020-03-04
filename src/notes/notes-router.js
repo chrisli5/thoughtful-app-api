@@ -12,6 +12,8 @@ const serializeNote = note => ({
     id: note.id,
     content: xss(note.content),
     createdAt: xss(note.date_created),
+    mood: xss(note.mood),
+    timeSpent: note.time_spent
 })
 
 notesRouter
@@ -31,6 +33,8 @@ notesRouter
         const newNote = {
             user_id: user.id,
             content: body.content,
+            mood: body.mood,
+            time_spent: body.timeSpent
         }
 
         NotesService.insertNote(
@@ -91,14 +95,17 @@ notesRouter
         const { user, body } = req;
         const { noteId } = req.params;
 
-        console.log(body);
+        const content = body.content || '';
+        const time_spent = body.timeSpent || 0;
 
         NotesService.updateNote(
             req.app.get('db'),
             noteId,
             user.id,
             {
-                content: body.content
+                content,
+                time_spent,
+                mood: body.mood
             }
         )
             .then(note => {

@@ -1,6 +1,6 @@
 const express = require('express');
 const AuthService = require('./auth-service');
-
+const { requireAuth } = require('../middleware/jwt-auth');
 const authRouter = express.Router();
 const bodyParser = express.json();
 
@@ -23,14 +23,14 @@ authRouter
             .then(dbUser => {
                 if (!dbUser)
                     return res.status(400).json({
-                        error: 'Incorrect username or password',
+                        error: 'Incorrect username or password.',
                     })
 
                 return AuthService.comparePasswords(loginUser.password, dbUser.password)
                     .then(compareMatch => {
                         if (!compareMatch)
                             return res.status(400).json({
-                                error: 'Incorrect username or password',
+                                error: 'Incorrect username or password.',
                             })
 
                         const sub = dbUser.username;
@@ -41,6 +41,15 @@ authRouter
                     })
             })
             .catch(next)
+    })
+
+authRouter
+    .route('/verify')
+    .all(requireAuth)
+    .get((req, res, next) => {
+        return res.status(200).json({
+            hasAuthToken: 'true'
+        })
     })
 
 module.exports = authRouter;
